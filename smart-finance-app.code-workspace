@@ -1,0 +1,13 @@
+{
+  "folders": [
+    { "path": "backend" },
+    { "path": "mobile" }
+  ],
+  "settings": {
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "editor.minimap.enabled": false
+  }
+}

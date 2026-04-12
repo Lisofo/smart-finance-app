@@ -1,0 +1,12 @@
+# Node
+backend/node_modules
+backend/.env
+
+# Flutter
+mobile/app/.dart_tool
+mobile/app/build
+mobile/app/.packages
+
+# IDE
+.vscode
+*.log

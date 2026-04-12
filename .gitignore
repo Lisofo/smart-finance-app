@@ -6,6 +6,7 @@ backend/.env
 mobile/app/.dart_tool
 mobile/app/build
 mobile/app/.packages
+mobile/app/.metadata
 
 # IDE
 .vscode

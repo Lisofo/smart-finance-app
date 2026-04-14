@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-// Import auth first
+import '../../core/theme/app_spacing.dart';
 import '../providers/auth_provider.dart';
-// Hide authProvider from expense_provider to resolve the 'ambiguous_import' error
-import '../providers/expense_provider.dart'; 
+import '../providers/expense_provider.dart';
 import '../widgets/expense_card.dart';
+import '../widgets/feedback_states.dart';
 import '../../core/constants/app_constants.dart';
 
 class ExpensesListScreen extends ConsumerStatefulWidget {
@@ -22,10 +22,12 @@ class _ExpensesListScreenState extends ConsumerState<ExpensesListScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  bool get _hasFilters =>
+      _selectedCategory != null || _startDate != null || _endDate != null;
+
   @override
   void initState() {
     super.initState();
-    // Schedule the load after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(expenseProvider.notifier).loadExpenses();
     });
@@ -33,12 +35,12 @@ class _ExpensesListScreenState extends ConsumerState<ExpensesListScreen> {
 
   void _applyFilters() {
     ref.read(expenseProvider.notifier).updateFilters(
-      ExpenseFilters( // Ensure this class is defined in expense_provider.dart
-        category: _selectedCategory,
-        startDate: _startDate,
-        endDate: _endDate,
-      ),
-    );
+          ExpenseFilters(
+            category: _selectedCategory,
+            startDate: _startDate,
+            endDate: _endDate,
+          ),
+        );
     Navigator.pop(context);
   }
 
@@ -52,78 +54,144 @@ class _ExpensesListScreenState extends ConsumerState<ExpensesListScreen> {
     Navigator.pop(context);
   }
 
+  void _resetFiltersFromBar() {
+    setState(() {
+      _selectedCategory = null;
+      _startDate = null;
+      _endDate = null;
+    });
+    ref.read(expenseProvider.notifier).updateFilters(ExpenseFilters());
+  }
+
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Expenses'),
-        content: StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  initialValue: _selectedCategory,
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('All')),
-                    ...AppConstants.expenseCategories.map((cat) =>
-                      DropdownMenuItem(value: cat, child: Text(cat))),
+      builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          surfaceTintColor: Colors.transparent,
+          title: Text(
+            'Filter expenses',
+            style: theme.textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          content: StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Category',
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          isExpanded: true,
+                          value: _selectedCategory,
+                          hint: const Text('All categories'),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('All categories'),
+                            ),
+                            ...AppConstants.expenseCategories.map(
+                              (cat) => DropdownMenuItem<String?>(
+                                value: cat,
+                                child: Text(cat),
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setStateDialog(() {
+                              _selectedCategory = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      tileColor: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.4),
+                      title: Text(
+                        _startDate == null
+                            ? 'Start date'
+                            : 'From ${DateFormat.yMMMd().format(_startDate!)}',
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                      trailing: Icon(Icons.event_outlined,
+                          color: colorScheme.primary),
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _startDate ?? DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (date != null) {
+                          setStateDialog(() {
+                            _startDate = date;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      tileColor: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.4),
+                      title: Text(
+                        _endDate == null
+                            ? 'End date'
+                            : 'To ${DateFormat.yMMMd().format(_endDate!)}',
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                      trailing: Icon(Icons.event_outlined,
+                          color: colorScheme.primary),
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _endDate ?? DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (date != null) {
+                          setStateDialog(() {
+                            _endDate = date;
+                          });
+                        }
+                      },
+                    ),
                   ],
-                  onChanged: (value) {
-                    setStateDialog(() {
-                      _selectedCategory = value;
-                    });
-                  },
                 ),
-                const SizedBox(height: 16),
-                ListTile(
-                  title: Text(_startDate == null
-                      ? 'Start Date'
-                      : 'Start: ${DateFormat.yMMMd().format(_startDate!)}'),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _startDate ?? DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                    );
-                    if (date != null) {
-                      setStateDialog(() {
-                        _startDate = date;
-                      });
-                    }
-                  },
-                ),
-                ListTile(
-                  title: Text(_endDate == null
-                      ? 'End Date'
-                      : 'End: ${DateFormat.yMMMd().format(_endDate!)}'),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _endDate ?? DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                    );
-                    if (date != null) {
-                      setStateDialog(() {
-                        _endDate = date;
-                      });
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        ),
-        actions: [
-          TextButton(onPressed: _clearFilters, child: const Text('Clear')),
-          TextButton(onPressed: _applyFilters, child: const Text('Apply')),
-        ],
-      ),
+              );
+            },
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            TextButton(
+              onPressed: _clearFilters,
+              child: const Text('Clear all'),
+            ),
+            FilledButton(
+              onPressed: _applyFilters,
+              child: const Text('Apply'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -137,21 +205,50 @@ class _ExpensesListScreenState extends ConsumerState<ExpensesListScreen> {
   @override
   Widget build(BuildContext context) {
     final expenseState = ref.watch(expenseProvider);
-    // Removed unused authState variable to clear the warning
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Expenses'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Expenses',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+              ),
+            ),
+            Text(
+              expenseState.expenses.isEmpty
+                  ? 'Track spending in one place'
+                  : '${expenseState.expenses.length} recorded',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
+            tooltip: 'Filter',
+            icon: Icon(
+              Icons.tune_rounded,
+              color: _hasFilters ? colorScheme.primary : null,
+            ),
             onPressed: _showFilterDialog,
           ),
-          PopupMenuButton(
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'logout',
-                child: Text('Logout'),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.logout_rounded),
+                  title: Text('Log out'),
+                ),
               ),
             ],
             onSelected: (value) {
@@ -160,83 +257,154 @@ class _ExpensesListScreenState extends ConsumerState<ExpensesListScreen> {
           ),
         ],
       ),
-      body: expenseState.isLoading && expenseState.expenses.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : expenseState.error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Error: ${expenseState.error}'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          ref.read(expenseProvider.notifier).loadExpenses();
-                        },
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : expenseState.expenses.isEmpty
-                  ? const Center(
-                      child: Text('No expenses found. Add one!'),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        await ref.read(expenseProvider.notifier).loadExpenses();
-                      },
-                      child: ListView.builder(
-                        itemCount: expenseState.expenses.length,
-                        itemBuilder: (context, index) {
-                          final expense = expenseState.expenses[index];
-                          return ExpenseCard(
-                            expense: expense,
-                            onEdit: () {
-                              context.push('/expenses/edit/${expense.id}', extra: {
-                                'description': expense.description,
-                                'amount': expense.amount,
-                                'category': expense.category,
-                                'expenseDate': expense.expenseDate,
-                              });
-                            },
-                            onDelete: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Delete Expense'),
-                                  content: const Text('Are you sure you want to delete this expense?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context, true),
-                                      style: TextButton.styleFrom(foregroundColor: Colors.red),
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (confirm == true) {
-                                await ref.read(expenseProvider.notifier).removeExpense(expense.id);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Expense deleted')),
-                                  );
-                                }
-                              }
-                            },
-                          );
-                        },
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_hasFilters)
+            Material(
+              color:
+                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.pageHorizontal,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.filter_alt_outlined,
+                      size: 18,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Filters active',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
+                    TextButton(
+                      onPressed: _resetFiltersFromBar,
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Expanded(
+            child: expenseState.isLoading && expenseState.expenses.isEmpty
+                ? const LoadingState()
+                : expenseState.error != null
+                    ? ErrorState(
+                        message: expenseState.error!,
+                        onRetry: () {
+                          ref.read(expenseProvider.notifier).loadExpenses();
+                        },
+                      )
+                    : expenseState.expenses.isEmpty
+                        ? const EmptyState(
+                            title: 'No expenses yet',
+                            subtitle: 'Tap + to add your first expense.',
+                          )
+                        : RefreshIndicator(
+                            edgeOffset: 8,
+                            onRefresh: () async {
+                              await ref
+                                  .read(expenseProvider.notifier)
+                                  .loadExpenses();
+                            },
+                            child: ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.pageHorizontal,
+                                AppSpacing.md,
+                                AppSpacing.pageHorizontal,
+                                96,
+                              ),
+                              itemCount: expenseState.expenses.length,
+                              itemBuilder: (context, index) {
+                                final expense = expenseState.expenses[index];
+                                return ExpenseCard(
+                                  expense: expense,
+                                  onEdit: () {
+                                    context.push('/expenses/edit/${expense.id}',
+                                        extra: {
+                                          'description': expense.description,
+                                          'amount': expense.amount,
+                                          'category': expense.category,
+                                          'expenseDate': expense.expenseDate,
+                                        });
+                                  },
+                                  onDelete: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) {
+                                        final t = Theme.of(context);
+                                        return AlertDialog(
+                                          title: Text(
+                                            'Delete expense?',
+                                            style: t.textTheme.titleLarge
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          content: const Text(
+                                            'This action cannot be undone.',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            FilledButton(
+                                              style: FilledButton.styleFrom(
+                                                backgroundColor:
+                                                    t.colorScheme.error,
+                                                foregroundColor:
+                                                    t.colorScheme.onError,
+                                              ),
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                    if (confirm == true) {
+                                      await ref
+                                          .read(expenseProvider.notifier)
+                                          .removeExpense(expense.id);
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          content:
+                                              const Text('Expense deleted'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           context.push('/expenses/add');
         },
-        child: const Icon(Icons.add),
+        tooltip: 'Add expense',
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }

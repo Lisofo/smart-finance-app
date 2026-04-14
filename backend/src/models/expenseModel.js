@@ -6,7 +6,7 @@ class ExpenseModel {
     const query = `
       INSERT INTO expenses (user_id, description, amount, category, expense_date)
       VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, user_id, description, amount::float, category, expense_date, created_at
+      RETURNING id, user_id, description, amount::float, category, expense_date, created_at, updated_at
     `; // Se agregó ::float en el RETURNING
     const values = [userId, description, amount, category, expenseDate];
     const result = await pool.query(query, values);

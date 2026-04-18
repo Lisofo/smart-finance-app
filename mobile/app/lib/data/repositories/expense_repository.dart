@@ -1,5 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:personal_finance/core/services/dio_client.dart';
+
+import '../../core/errors/api_error_mapper.dart';
 import '../datasources/expense_api.dart';
 import '../models/expense_model.dart';
 
@@ -18,11 +21,15 @@ class ExpenseRepository {
     String? startDate,
     String? endDate,
   }) async {
-    return await expenseApi.getExpenses(
-      category: category,
-      startDate: startDate,
-      endDate: endDate,
-    );
+    try {
+      return await expenseApi.getExpenses(
+        category: category,
+        startDate: startDate,
+        endDate: endDate,
+      );
+    } on DioException catch (e) {
+      throw mapApiError(e);
+    }
   }
 
   Future<ExpenseModel> createExpense({
@@ -31,12 +38,16 @@ class ExpenseRepository {
     String? category,
     required String expenseDate,
   }) async {
-    return await expenseApi.createExpense(
-      description: description,
-      amount: amount,
-      category: category,
-      expenseDate: expenseDate,
-    );
+    try {
+      return await expenseApi.createExpense(
+        description: description,
+        amount: amount,
+        category: category,
+        expenseDate: expenseDate,
+      );
+    } on DioException catch (e) {
+      throw mapApiError(e);
+    }
   }
 
   Future<ExpenseModel> updateExpense({
@@ -46,16 +57,24 @@ class ExpenseRepository {
     String? category,
     String? expenseDate,
   }) async {
-    return await expenseApi.updateExpense(
-      id: id,
-      description: description,
-      amount: amount,
-      category: category,
-      expenseDate: expenseDate,
-    );
+    try {
+      return await expenseApi.updateExpense(
+        id: id,
+        description: description,
+        amount: amount,
+        category: category,
+        expenseDate: expenseDate,
+      );
+    } on DioException catch (e) {
+      throw mapApiError(e);
+    }
   }
 
   Future<void> deleteExpense(int id) async {
-    await expenseApi.deleteExpense(id);
+    try {
+      await expenseApi.deleteExpense(id);
+    } on DioException catch (e) {
+      throw mapApiError(e);
+    }
   }
 }

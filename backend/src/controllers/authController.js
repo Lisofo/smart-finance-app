@@ -1,16 +1,20 @@
 // backend/src/controllers/authController.js
 const AuthService = require('../services/authService');
+const {
+  validateEmailPasswordRegister,
+  validateEmailPasswordLogin,
+} = require('../utils/validation');
 
 class AuthController {
   static async register(req, res, next) {
     try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
+      const { email, password } = req.body || {};
+      const v = validateEmailPasswordRegister(email, password);
+      if (!v.ok) {
+        return res.status(400).json({ message: v.error });
       }
 
-      const user = await AuthService.register(email, password);
+      const user = await AuthService.register(v.email, v.password);
       res.status(201).json({ message: 'User registered successfully', user });
     } catch (error) {
       if (error.message === 'User already exists') {
@@ -22,13 +26,13 @@ class AuthController {
 
   static async login(req, res, next) {
     try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
+      const { email, password } = req.body || {};
+      const v = validateEmailPasswordLogin(email, password);
+      if (!v.ok) {
+        return res.status(400).json({ message: v.error });
       }
 
-      const { token, user } = await AuthService.login(email, password);
+      const { token, user } = await AuthService.login(v.email, v.password);
       res.status(200).json({ message: 'Login successful', token, user });
     } catch (error) {
       if (error.message === 'Invalid credentials') {

@@ -1,40 +1,57 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../constants/app_constants.dart';
 import 'secure_storage_service.dart';
+import 'session_unauthorized.dart';
 
 final dioProvider = Provider<Dio>((ref) {
-  final dio = Dio(BaseOptions(
-    baseUrl: AppConstants.baseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
-    headers: {'Content-Type': 'application/json'},
-  ));
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: AppConstants.baseUrl,
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 20),
+      sendTimeout: const Duration(seconds: 20),
+      headers: {'Content-Type': 'application/json'},
+    ),
+  );
 
-  // Add logging interceptor
-  dio.interceptors.add(LogInterceptor(
-    request: true,
-    requestHeader: true,
-    requestBody: true,
-    responseHeader: true,
-    responseBody: true,
-  ));
+  if (kDebugMode) {
+    dio.interceptors.add(
+      LogInterceptor(
+        request: true,
+        requestHeader: false,
+        requestBody: true,
+        responseHeader: false,
+        responseBody: true,
+        error: true,
+        logPrint: (o) => debugPrint(o.toString()),
+      ),
+    );
+  }
 
-  // Add auth token interceptor
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await SecureStorageService().getToken();
-        if (token != null) {
+        if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
         return handler.next(options);
       },
       onError: (DioException error, handler) async {
         if (error.response?.statusCode == 401) {
-          // Token expired or invalid
-          await SecureStorageService().clearAll();
-          // We'll handle navigation separately via Riverpod
+          final auth = error.requestOptions.headers['Authorization'];
+          final hadBearer =
+              auth != null && auth.toString().trim().isNotEmpty;
+          if (hadBearer) {
+            try {
+              await notifySessionUnauthorized?.call();
+            } catch (e, st) {
+              debugPrint('[dio] session cleanup failed: $e\n$st');
+            }
+          }
         }
         return handler.next(error);
       },

@@ -17,8 +17,9 @@ class ExpenseApi {
     if (endDate != null) queryParams['endDate'] = endDate;
 
     final response = await dio.get('/api/expenses', queryParameters: queryParams);
-    final List<dynamic> data = response.data['expenses'];
-    return data.map((json) => ExpenseModel.fromJson(json)).toList();
+    final raw = response.data['expenses'];
+    final List<dynamic> data = raw is List ? raw : const [];
+    return data.map((json) => ExpenseModel.fromJson(json as Map<String, dynamic>)).toList();
   }
 
   Future<ExpenseModel> createExpense({

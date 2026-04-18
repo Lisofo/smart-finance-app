@@ -67,11 +67,12 @@ class ExpenseState {
     bool? isLoading,
     String? error,
     ExpenseFilters? filters,
+    bool clearError = false,
   }) {
     return ExpenseState(
       expenses: expenses ?? this.expenses,
       isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
+      error: clearError ? null : (error ?? this.error),
       filters: filters ?? this.filters,
     );
   }
@@ -90,8 +91,19 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
     this._deleteExpenseUseCase,
   ) : super(ExpenseState());
 
+  void clearError() {
+    if (state.error != null) {
+      state = state.copyWith(clearError: true);
+    }
+  }
+
+  /// Clears cached expenses (e.g. after sign-out) so another session never sees stale rows.
+  void reset() {
+    state = const ExpenseState();
+  }
+
   Future<void> loadExpenses() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final expenses = await _getExpensesUseCase(
         category: state.filters.category,
@@ -104,7 +116,7 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
       );
       state = state.copyWith(expenses: expenses, isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _expenseErrorMessage(e));
     }
   }
 
@@ -114,7 +126,7 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
     String? category,
     required DateTime expenseDate,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _createExpenseUseCase(
         description: description,
@@ -124,7 +136,7 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
       );
       await loadExpenses(); // Reload list
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _expenseErrorMessage(e));
     }
   }
 
@@ -135,7 +147,7 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
     String? category,
     DateTime? expenseDate,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _updateExpenseUseCase(
         id: id,
@@ -146,17 +158,17 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
       );
       await loadExpenses();
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _expenseErrorMessage(e));
     }
   }
 
   Future<void> removeExpense(int id) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _deleteExpenseUseCase(id);
       await loadExpenses();
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _expenseErrorMessage(e));
     }
   }
 
@@ -168,6 +180,11 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
+}
+
+String _expenseErrorMessage(Object e) {
+  if (e is String) return e;
+  return e.toString();
 }
 
 final expenseProvider = StateNotifierProvider<ExpenseNotifier, ExpenseState>((ref) {

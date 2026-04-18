@@ -2,20 +2,17 @@
 const ExpenseModel = require('../models/expenseModel');
 
 class ExpenseService {
-  static async createExpense(userId, { description, amount, category, expenseDate }) {
-    if (!description || !amount) {
-      throw new Error('Description and amount are required');
-    }
-    if (amount <= 0) {
-      throw new Error('Amount must be positive');
-    }
+  static async createExpense(userId, payload) {
+    const { description, amount, category, expenseDate } = payload;
+    const dateStr =
+      expenseDate || new Date().toISOString().split('T')[0];
 
     const expense = await ExpenseModel.create({
       userId,
       description,
       amount,
       category: category || null,
-      expenseDate: expenseDate || new Date().toISOString().split('T')[0]
+      expenseDate: dateStr,
     });
     return expense;
   }
@@ -28,10 +25,6 @@ class ExpenseService {
     const existing = await ExpenseModel.findByIdAndUser(id, userId);
     if (!existing) {
       throw new Error('Expense not found');
-    }
-
-    if (updates.amount !== undefined && updates.amount <= 0) {
-      throw new Error('Amount must be positive');
     }
 
     const updated = await ExpenseModel.update(id, userId, updates);

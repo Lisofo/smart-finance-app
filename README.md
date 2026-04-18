@@ -35,8 +35,8 @@ Full-stack personal finance application: **Flutter** mobile client and **Node.js
 
 | | |
 |:--:|:--:|
-| *Login* | *Expense list* |
-| ![Login](docs/screenshots/login.png) | ![Expenses](docs/screenshots/expenses.png) |
+| *Login* | *Register* | *Chart* | *Expenses List* | *Add Expense* |
+| ![Login](docs/screenshots/login.png) | ![Register](docs/screenshots/register.png) | ![Chart](docs/screenshots/chart.png) | ![Expenses](docs/screenshots/expenses.png) | ![Add Expense](docs/screenshots/add_expense.png) | 
 
 *Placeholder: create `docs/screenshots/` and drop images here, or remove this table until you have assets.*
 

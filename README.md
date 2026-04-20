@@ -41,7 +41,7 @@ Full-stack personal finance application: **Flutter** mobile client and **Node.js
 | | |
 |:--:|:--:|
 | *Chart* | *Expenses List* |
-![Chart](docs/screenshots/chart.png) | ![Expenses](docs/screenshots/expenses.png) |
+![Chart](docs/screenshots/chart.png) | ![Expenses List](docs/screenshots/expenses.png) |
 
 | | |
 |:--:|:--:|
